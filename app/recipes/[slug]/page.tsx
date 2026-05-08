@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { findConversions } from "@/lib/paint-hub/conversions";
 import { RecipeStepCard } from "@/components/recipes/RecipeStepCard";
 import { InventoryPanel } from "@/components/recipes/InventoryPanel";
 import type { Metadata } from "next";
-import type { RecipeStepData } from "@/types/paint-hub";
+import type { RecipeStepData, AlternativePaint } from "@/types/paint-hub";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +82,25 @@ export default async function RecipeDetailPage({ params }: Props) {
     ).values(),
   ];
 
+  // Fetch cross-brand alternatives for every unique paint in this recipe
+  const uniquePaintIds = allRequiredPaints.map((p) => p.paintId);
+  const alternativesEntries = await Promise.all(
+    uniquePaintIds.map(async (id) => {
+      const results = await findConversions(id, { maxResults: 4, maxDeltaE: 10 });
+      const alts: AlternativePaint[] = results.map((r) => ({
+        id: r.paint.id,
+        name: r.paint.name,
+        hex: r.paint.hex,
+        finish: r.paint.finish,
+        brandName: r.paint.brandName,
+        deltaE: r.deltaE,
+        isOfficial: r.isOfficial,
+      }));
+      return [id, alts] as const;
+    })
+  );
+  const alternativesMap = Object.fromEntries(alternativesEntries);
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
@@ -111,7 +131,7 @@ export default async function RecipeDetailPage({ params }: Props) {
         {/* Steps */}
         <div className="space-y-4">
           {steps.map((step) => (
-            <RecipeStepCard key={step.id} step={step} />
+            <RecipeStepCard key={step.id} step={step} alternatives={alternativesMap} />
           ))}
         </div>
 

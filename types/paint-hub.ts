@@ -43,3 +43,13 @@ export interface RecipeStepData {
     sortOrder: number;
   }[];
 }
+
+export interface AlternativePaint {
+  id: string;
+  name: string;
+  hex: string;
+  finish: string;
+  brandName: string;
+  deltaE: number;
+  isOfficial: boolean;
+}
