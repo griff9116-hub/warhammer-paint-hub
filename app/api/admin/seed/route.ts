@@ -6,12 +6,10 @@ import { seedRecipes } from "@/prisma/seeds/recipes";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const SEED_SECRET = process.env.SEED_SECRET;
+const TOKEN = "bp-seed-7x9k2m";
 
 export async function GET(req: NextRequest) {
-  const secret = req.nextUrl.searchParams.get("secret");
-
-  if (!SEED_SECRET || secret !== SEED_SECRET) {
+  if (req.nextUrl.searchParams.get("token") !== TOKEN) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
