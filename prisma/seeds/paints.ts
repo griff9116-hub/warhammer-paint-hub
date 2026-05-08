@@ -648,6 +648,7 @@ export async function seedPaints(prisma: PrismaClient) {
 
   const brandIdMap = new Map<string, string>();
 
+  // 1. Upsert brands sequentially (only 7, fast)
   for (const brand of BRANDS) {
     const b = await prisma.paintBrand.upsert({
       where: { slug: brand.slug },
@@ -655,68 +656,59 @@ export async function seedPaints(prisma: PrismaClient) {
       create: { slug: brand.slug, name: brand.name, website: brand.website },
     });
     brandIdMap.set(brand.slug, b.id);
+  }
 
-    for (const paint of brand.paints) {
+  // 2. Bulk-insert all paints per brand using createMany (one query per brand)
+  for (const brand of BRANDS) {
+    const brandId = brandIdMap.get(brand.slug)!;
+    const data = brand.paints.map((paint) => {
       const lab = hexToLab(paint.hex);
-      await prisma.paint.upsert({
-        where: { brandId_slug: { brandId: b.id, slug: paint.slug } },
-        update: {
-          name: paint.name,
-          hex: paint.hex,
-          finish: paint.finish,
-          category: paint.category,
-          range: paint.range,
-          labL: lab.L,
-          labA: lab.a,
-          labB: lab.b,
-        },
-        create: {
-          brandId: b.id,
-          slug: paint.slug,
-          name: paint.name,
-          hex: paint.hex,
-          finish: paint.finish,
-          category: paint.category,
-          range: paint.range,
-          labL: lab.L,
-          labA: lab.a,
-          labB: lab.b,
-        },
-      });
-    }
+      return {
+        brandId,
+        slug: paint.slug,
+        name: paint.name,
+        hex: paint.hex,
+        finish: paint.finish,
+        category: paint.category,
+        range: paint.range,
+        labL: lab.L,
+        labA: lab.a,
+        labB: lab.b,
+      };
+    });
+    await prisma.paint.createMany({ data, skipDuplicates: true });
     console.log(`    ✓ ${brand.name} (${brand.paints.length} paints)`);
   }
 
-  // Seed official equivalents
+  // 3. Resolve all equivalent paint IDs in parallel, then bulk-insert
   console.log("  Seeding official paint equivalents...");
-  for (const eq of OFFICIAL_EQUIVALENTS) {
-    const [fromBrandSlug, fromPaintSlug] = eq.from;
-    const [toBrandSlug, toPaintSlug] = eq.to;
+  const { deltaE2000: dE } = await import("../../lib/paint-hub/color");
 
-    const fromBrandId = brandIdMap.get(fromBrandSlug);
-    const toBrandId = brandIdMap.get(toBrandSlug);
-    if (!fromBrandId || !toBrandId) continue;
+  const resolved = await Promise.all(
+    OFFICIAL_EQUIVALENTS.map(async (eq) => {
+      const fromBrandId = brandIdMap.get(eq.from[0]);
+      const toBrandId   = brandIdMap.get(eq.to[0]);
+      if (!fromBrandId || !toBrandId) return null;
 
-    const fromPaint = await prisma.paint.findUnique({
-      where: { brandId_slug: { brandId: fromBrandId, slug: fromPaintSlug } },
-    });
-    const toPaint = await prisma.paint.findUnique({
-      where: { brandId_slug: { brandId: toBrandId, slug: toPaintSlug } },
-    });
-    if (!fromPaint || !toPaint) continue;
+      const [fromPaint, toPaint] = await Promise.all([
+        prisma.paint.findUnique({ where: { brandId_slug: { brandId: fromBrandId, slug: eq.from[1] } } }),
+        prisma.paint.findUnique({ where: { brandId_slug: { brandId: toBrandId,   slug: eq.to[1]   } } }),
+      ]);
+      if (!fromPaint || !toPaint) return null;
 
-    // Compute actual deltaE for the stored equivalent
-    const { deltaE2000: dE } = await import("../../lib/paint-hub/color");
-    const de = dE(
-      { L: fromPaint.labL, a: fromPaint.labA, b: fromPaint.labB },
-      { L: toPaint.labL, a: toPaint.labA, b: toPaint.labB }
-    );
+      return {
+        fromPaintId: fromPaint.id,
+        toPaintId:   toPaint.id,
+        deltaE: dE(
+          { L: fromPaint.labL, a: fromPaint.labA, b: fromPaint.labB },
+          { L: toPaint.labL,   a: toPaint.labA,   b: toPaint.labB   },
+        ),
+        isOfficial: true,
+      };
+    }),
+  );
 
-    await prisma.paintEquivalent.upsert({
-      where: { fromPaintId_toPaintId: { fromPaintId: fromPaint.id, toPaintId: toPaint.id } },
-      update: { deltaE: de, isOfficial: true },
-      create: { fromPaintId: fromPaint.id, toPaintId: toPaint.id, deltaE: de, isOfficial: true },
-    });
-  }
-  console.log(`    ✓ ${OFFICIAL_EQUIVALENTS.length} official equivalents seeded`);
+  const equivData = resolved.filter((r): r is NonNullable<typeof r> => r !== null);
+  await prisma.paintEquivalent.createMany({ data: equivData, skipDuplicates: true });
+  console.log(`    ✓ ${equivData.length} official equivalents seeded`);
 }
