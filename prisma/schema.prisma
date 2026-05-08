@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model PaintBrand {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  website   String?
+  createdAt DateTime @default(now())
+
+  paints Paint[]
+}
+
+model Paint {
+  id        String   @id @default(cuid())
+  brandId   String
+  slug      String
+  name      String
+  hex       String
+  finish    String
+  category  String
+  range     String?
+  labL      Float
+  labA      Float
+  labB      Float
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  brand            PaintBrand        @relation(fields: [brandId], references: [id])
+  equivalentsFrom  PaintEquivalent[] @relation("EquivFrom")
+  equivalentsTo    PaintEquivalent[] @relation("EquivTo")
+  recipeStepPaints RecipeStepPaint[]
+
+  @@unique([brandId, slug])
+  @@index([labL, labA, labB])
+}
+
+model PaintEquivalent {
+  id          String  @id @default(cuid())
+  fromPaintId String
+  toPaintId   String
+  deltaE      Float
+  isOfficial  Boolean @default(false)
+
+  fromPaint Paint @relation("EquivFrom", fields: [fromPaintId], references: [id])
+  toPaint   Paint @relation("EquivTo",   fields: [toPaintId],   references: [id])
+
+  @@unique([fromPaintId, toPaintId])
+  @@index([fromPaintId, deltaE])
+}
+
+model Faction {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  name       String
+  allegiance String?
+  sortOrder  Int      @default(0)
+
+  recipes Recipe[]
+}
+
+model Recipe {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String?
+  factionId   String
+  difficulty  String
+  technique   String?
+  authorName  String?
+  status      String   @default("PENDING")
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  faction Faction      @relation(fields: [factionId], references: [id])
+  steps   RecipeStep[]
+}
+
+model RecipeStep {
+  id          String   @id @default(cuid())
+  recipeId    String
+  stepNumber  Int
+  title       String
+  description String
+  technique   String?
+  duration    String?
+
+  recipe Recipe          @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  paints RecipeStepPaint[]
+
+  @@unique([recipeId, stepNumber])
+}
+
+model RecipeStepPaint {
+  id        String  @id @default(cuid())
+  stepId    String
+  paintId   String
+  role      String?
+  dilution  String?
+  sortOrder Int     @default(0)
+
+  step  RecipeStep @relation(fields: [stepId],  references: [id], onDelete: Cascade)
+  paint Paint      @relation(fields: [paintId], references: [id])
+
+  @@unique([stepId, paintId])
+}
