@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { href: "/convert", label: "Converter" },
   { href: "/recipes", label: "Recipes" },
   { href: "/inventory", label: "My Collection" },
+  { href: "/colour-wheel", label: "Colour Wheel" },
 ];
 
 export function Navbar() {
