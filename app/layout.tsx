@@ -3,7 +3,7 @@ import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 
 export const metadata: Metadata = {
-  title: { default: "Warhammer Paint Hub", template: "%s | Warhammer Paint Hub" },
+  title: { default: "Battle Palette", template: "%s | Battle Palette" },
   description: "Find cross-brand paint equivalents and browse step-by-step Warhammer 40k painting recipes.",
 };
 
@@ -14,7 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Navbar />
         <main>{children}</main>
         <footer className="border-t border-iron-700 mt-16 py-8 text-center text-iron-400 text-sm">
-          <p>Warhammer 40,000 is a trademark of Games Workshop Ltd. This is a fan project.</p>
+          <p>Warhammer 40,000 is a trademark of Games Workshop Ltd. Battle Palette is an independent fan project.</p>
         </footer>
       </body>
     </html>
