@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { RecipeCard } from "@/components/recipes/RecipeCard";
-import { Palette, BookOpen, Search, Package } from "lucide-react";
+import { Palette, BookOpen, Search, Package, Aperture } from "lucide-react";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -161,24 +161,44 @@ export default async function HomePage() {
             <span className="text-blood-400 text-sm group-hover:underline mt-4 block">Browse paints →</span>
           </Link>
 
-          {/* Collection — spans 2 cols on desktop */}
+          {/* Collection */}
           <Link
             href="/inventory"
-            className="group md:col-span-2 bg-iron-900 hover:bg-iron-800 p-6 flex items-center gap-8 transition-colors"
+            className="group bg-iron-900 hover:bg-iron-800 p-6 flex flex-col justify-between transition-colors"
           >
-            <div className="w-10 h-10 bg-blood-600/25 rounded flex items-center justify-center shrink-0">
-              <Package className="w-5 h-5 text-blood-400" />
-            </div>
-            <div className="min-w-0">
-              <h2 className="font-display text-lg text-bone-200 mb-1">My Collection</h2>
+            <div>
+              <div className="w-8 h-8 bg-blood-600/25 rounded flex items-center justify-center mb-4">
+                <Package className="w-4 h-4 text-blood-400" />
+              </div>
+              <h2 className="font-display text-lg text-bone-200 mb-2">My Collection</h2>
               <p className="text-iron-400 text-sm leading-relaxed">
                 Mark paints you own and instantly see which recipe steps you can already complete.
                 No account required — stored in your browser.
               </p>
-              <span className="text-blood-400 text-sm group-hover:underline mt-2 block">
-                Manage collection →
-              </span>
             </div>
+            <span className="text-blood-400 text-sm group-hover:underline mt-4 block">
+              Manage collection →
+            </span>
+          </Link>
+
+          {/* Colour Wheel */}
+          <Link
+            href="/colour-wheel"
+            className="group bg-iron-900 hover:bg-iron-800 p-6 flex flex-col justify-between transition-colors"
+          >
+            <div>
+              <div className="w-8 h-8 bg-blood-600/25 rounded flex items-center justify-center mb-4">
+                <Aperture className="w-4 h-4 text-blood-400" />
+              </div>
+              <h2 className="font-display text-lg text-bone-200 mb-2">Colour Wheel</h2>
+              <p className="text-iron-400 text-sm leading-relaxed">
+                Pick any hue and explore complementary, triadic, and analogous harmonies —
+                each matched to real paints by perceptual colour difference.
+              </p>
+            </div>
+            <span className="text-blood-400 text-sm group-hover:underline mt-4 block">
+              Open colour wheel →
+            </span>
           </Link>
         </div>
       </div>
